@@ -18,13 +18,13 @@ import java.util.Objects;
 
 public class ViewPagerAdapter extends PagerAdapter {
     Context context;
-    ArrayList<String> imagePaths = new ArrayList<>();
+    ArrayList<String> imagePaths;
     LayoutInflater mLayoutInflater;
 
     public  ViewPagerAdapter(Context context, ArrayList<String> imagePaths ){
         this.context = context;
         this.imagePaths = imagePaths;
-        mLayoutInflater = (LayoutInflater) context.getSystemService(context.LAYOUT_INFLATER_SERVICE);
+        mLayoutInflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
     }
 
     @Override
@@ -54,7 +54,7 @@ public class ViewPagerAdapter extends PagerAdapter {
     }
 
     @Override
-    public void destroyItem(ViewGroup container, int position, Object object){
+    public void destroyItem(ViewGroup container, int position, @NonNull Object object){
         container.removeView((LinearLayout) object);
     }
 }

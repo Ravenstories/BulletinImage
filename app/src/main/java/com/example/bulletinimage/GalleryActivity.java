@@ -13,7 +13,6 @@ public class GalleryActivity extends AppCompatActivity {
     ArrayList<String> filePaths = new ArrayList<>();
     File[] listFile;
 
-    private String folderName = "MyPhotoDir";
     ViewPager mViewPager;
     ViewPagerAdapter mViewPagerAdapter;
 
@@ -21,18 +20,20 @@ public class GalleryActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_gallery);
-        // getFromSdCard();
+        getFromSdCard();
         mViewPager = findViewById(R.id.viewPagerMain);
         mViewPagerAdapter = new ViewPagerAdapter(this, filePaths);
         mViewPager.setAdapter(mViewPagerAdapter);
     }
 
     public void getFromSdCard(){
+        String folderName = "MyPhotoDir";
         File file = new File(getExternalFilesDir(folderName), "/");
         if (file.isDirectory()){
             listFile = file.listFiles();
-            for (int i = 0; i < listFile.length; i++){
-                filePaths.add(listFile[i].getAbsolutePath());
+            assert listFile != null;
+            for (File value : listFile) {
+                filePaths.add(value.getAbsolutePath());
             }
         }
     }
