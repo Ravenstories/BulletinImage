@@ -4,6 +4,7 @@ import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -40,7 +41,7 @@ public class ViewPagerAdapter extends PagerAdapter {
     public Object instantiateItem(@NonNull ViewGroup container, final int position){
         View itemView = mLayoutInflater.inflate(R.layout.galleryitem, container, false);
 
-        ImageView imageView = itemView.findViewById(R.id.imageViewmain);
+        ImageView imageView = itemView.findViewById(R.id.imageViewMain);
 
         Bitmap myBitMap = BitmapFactory.decodeFile(imagePaths.get(position));
         Matrix matrix = new Matrix();
@@ -50,7 +51,8 @@ public class ViewPagerAdapter extends PagerAdapter {
 
         Objects.requireNonNull(container).addView(itemView);
 
-        return imageView;
+        Log.d("imageView", "Returning ImageView");
+        return itemView;
     }
 
     @Override

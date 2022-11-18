@@ -29,6 +29,7 @@ import android.view.Surface;
 import android.view.TextureView;
 import android.widget.Button;
 import android.widget.Toast;
+import android.util.Base64;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
@@ -45,12 +46,21 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 
+import okhttp3.Call;
+import okhttp3.Callback;
+import okhttp3.FormBody;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
+
 public class MainActivity extends AppCompatActivity {
 
     private Button btn_camera;
     private TextureView textureView;
 
     private static final String TAG = "AndroidCameraApi";
+
     private static final SparseIntArray ORIENTATIONS = new SparseIntArray();
     static {
         ORIENTATIONS.append(Surface.ROTATION_0, 90);
@@ -111,6 +121,7 @@ public class MainActivity extends AppCompatActivity {
 
         }
     };
+
     private final CameraDevice.StateCallback stateCallback = new CameraDevice.StateCallback() {
         @Override
         public void onOpened(@NonNull CameraDevice camera) {
@@ -195,6 +206,7 @@ public class MainActivity extends AppCompatActivity {
                             byte[] bytes = new byte[buffer.capacity()];
                             buffer.get(bytes);
                             save(bytes);
+                            saveToApi(bytes);
                         } catch (IOException e) {
                             e.printStackTrace();
                         }
@@ -204,6 +216,34 @@ public class MainActivity extends AppCompatActivity {
                             outputStream.write(bytes);
                         }
                     }
+                    private void saveToApi(byte[] bytes) throws IOException {
+                        String encodedString = Base64.encodeToString(bytes, Base64.DEFAULT);
+
+                        OkHttpClient client = new OkHttpClient().newBuilder()
+                                .build();
+
+                        RequestBody formBody = new FormBody.Builder()
+                                .add("image", encodedString)
+                                .build();
+
+                        Request request = new Request.Builder()
+                                .url("http://10.108.137.151:8080/upload") //Your machines local IPV4
+                                .method("POST", formBody)
+                                .build();
+
+                        client.newCall(request).enqueue(new Callback() {
+
+                            public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                                e.printStackTrace();
+                            }
+
+                            @Override
+                            public void onResponse(@NonNull Call call, @NonNull Response response) {
+                                Log.d("onResonse API call", response.toString());
+                            }
+                        });
+                    }
+
                 };
                 reader.setOnImageAvailableListener(readerListener, mBackgroundHandler);
                 final CameraCaptureSession.CaptureCallback captureListener = new CameraCaptureSession.CaptureCallback(){
