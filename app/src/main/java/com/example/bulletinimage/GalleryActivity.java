@@ -1,19 +1,18 @@
 package com.example.bulletinimage;
 
+import android.os.Bundle;
+import android.util.Log;
+import android.widget.ImageView;
+
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.viewpager.widget.ViewPager;
 
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.os.Bundle;
-import android.util.Base64;
-import android.util.Log;
-import android.widget.ImageView;
-
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.regex.Pattern;
 
 import okhttp3.Call;
 import okhttp3.Callback;
@@ -36,10 +35,7 @@ public class GalleryActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_gallery);
         getFromSdCard();
-
-
-
-
+        getFromApi();
 
         mImageView = findViewById(R.id.imageView);
         mViewPager = findViewById(R.id.viewPagerMain);
@@ -65,28 +61,41 @@ public class GalleryActivity extends AppCompatActivity {
     public void getFromApi(){
         OkHttpClient client = new OkHttpClient();
         String url = "10.108.137.151/files";
-        Request request = new Request.Builder().url(url).build();
+
+        Request request = new Request.Builder()
+                .url("http://192.168.1.90:8080/files/") //Your machines local IPV4
+                .method("GET", null)
+                .build();
+
         client.newCall(request).enqueue(new Callback() {
-            @Override
+
             public void onFailure(@NonNull Call call, @NonNull IOException e) {
                 e.printStackTrace();
             }
 
             @Override
             public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
-                if (response.isSuccessful()){
-                    assert response.body() != null;
-                    final String myResponse = response.body().string();
-                    Log.d("onResponse", "myResponse");
+                assert response.body() != null;
+                Log.d("onResponse API call", response.body().toString());
 
-                    GalleryActivity.this.runOnUiThread(() -> {
-                        byte[] decodeString = Base64.decode(myResponse, Base64.DEFAULT);
-                        Bitmap picture = BitmapFactory.decodeByteArray(decodeString, 0, decodeString.length);
-                        mImageView.setImageBitmap( picture);
-                        Log.d("Incoming", myResponse);
-                    });
+                try {
+                    String apiImage = response.body().string();
+
+                    //Spilt images into correct urls
+                    String[] words = apiImage.split(",");
+                    System.out.println(Arrays.toString(words));
+                    Pattern pattern = Pattern.compile(",");
+                    words = pattern.split(apiImage);
+                    System.out.println(Arrays.toString(words));
+
+                    //filePaths.add(
+
+                }catch (Exception e){
+                    e.printStackTrace();
                 }
+
             }
         });
     }
 }
+

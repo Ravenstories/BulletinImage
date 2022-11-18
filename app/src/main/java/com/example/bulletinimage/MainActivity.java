@@ -5,6 +5,8 @@ import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.ImageFormat;
 import android.graphics.SurfaceTexture;
 import android.hardware.camera2.CameraAccessException;
@@ -22,6 +24,7 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.HandlerThread;
+import android.util.Base64;
 import android.util.Log;
 import android.util.Size;
 import android.util.SparseIntArray;
@@ -29,12 +32,12 @@ import android.view.Surface;
 import android.view.TextureView;
 import android.widget.Button;
 import android.widget.Toast;
-import android.util.Base64;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -141,21 +144,7 @@ public class MainActivity extends AppCompatActivity {
         }
     };
 
-    protected void startBGThread(){
-        mBackgroundThread = new HandlerThread("Camera Background");
-        mBackgroundThread.start();
-        mBackgroundHandler = new Handler(mBackgroundThread.getLooper());
-    }
-    protected void stopBGThread(){
-        mBackgroundThread.quitSafely();
-        try {
-            mBackgroundThread.join();
-            mBackgroundThread = null;
-            mBackgroundHandler = null;
-        }catch (InterruptedException e){
-            e.printStackTrace();
-        }
-    }
+
 
     protected void takePicture(){
         if (cameraDevice == null){
@@ -189,15 +178,21 @@ public class MainActivity extends AppCompatActivity {
 
                 int rotation = getDisplay().getRotation();
                 captureBuilder.set(CaptureRequest.JPEG_ORIENTATION, ORIENTATIONS.get(rotation));
+
                 file = null;
                 String folderName = "MyPhotoDir";
                 File folder = new File(folderName);
+
                 @SuppressLint("SimpleDateFormat") String timeStamp = new SimpleDateFormat("ddMMyyyy_HHmmss").format(new Date());
+
                 String imageFileName = "IMG_" + timeStamp + ".jpg";
+
                 file = new File(getExternalFilesDir(folderName), "/" + imageFileName);
+
                 if (!folder.exists()){
                     folder.mkdirs();
                 }
+
                 ImageReader.OnImageAvailableListener readerListener = new ImageReader.OnImageAvailableListener() {
                     @Override
                     public void onImageAvailable(ImageReader imageReader) {
@@ -206,7 +201,7 @@ public class MainActivity extends AppCompatActivity {
                             byte[] bytes = new byte[buffer.capacity()];
                             buffer.get(bytes);
                             save(bytes);
-                            saveToApi(bytes);
+                            saveToApi();
                         } catch (IOException e) {
                             e.printStackTrace();
                         }
@@ -216,18 +211,19 @@ public class MainActivity extends AppCompatActivity {
                             outputStream.write(bytes);
                         }
                     }
-                    private void saveToApi(byte[] bytes) throws IOException {
-                        String encodedString = Base64.encodeToString(bytes, Base64.DEFAULT);
+                    private void saveToApi() throws IOException {
+                        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+                        Bitmap img = BitmapFactory.decodeFile(file.getAbsolutePath());
+                        img.compress(Bitmap.CompressFormat.JPEG, 100, byteArrayOutputStream);
+                        byte[] byteArray = byteArrayOutputStream .toByteArray();
+                        String encodedString = Base64.encodeToString(byteArray, Base64.DEFAULT);
 
-                        OkHttpClient client = new OkHttpClient().newBuilder()
-                                .build();
+                        OkHttpClient client = new OkHttpClient().newBuilder().build();
 
-                        RequestBody formBody = new FormBody.Builder()
-                                .add("image", encodedString)
-                                .build();
+                        RequestBody formBody = new FormBody.Builder().add("image", encodedString).build();
 
                         Request request = new Request.Builder()
-                                .url("http://10.108.137.151:8080/upload") //Your machines local IPV4
+                                .url("http://192.168.1.90:8080/upload") //Your machines local IPV4
                                 .method("POST", formBody)
                                 .build();
 
@@ -239,7 +235,7 @@ public class MainActivity extends AppCompatActivity {
 
                             @Override
                             public void onResponse(@NonNull Call call, @NonNull Response response) {
-                                Log.d("onResonse API call", response.toString());
+                                Log.d("onResponse API call", response.toString());
                             }
                         });
                     }
@@ -356,6 +352,22 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    protected void startBGThread(){
+        mBackgroundThread = new HandlerThread("Camera Background");
+        mBackgroundThread.start();
+        mBackgroundHandler = new Handler(mBackgroundThread.getLooper());
+    }
+    protected void stopBGThread(){
+        mBackgroundThread.quitSafely();
+        try {
+            mBackgroundThread.join();
+            mBackgroundThread = null;
+            mBackgroundHandler = null;
+        }catch (InterruptedException e){
+            e.printStackTrace();
+        }
+    }
+
     @Override
     protected void onResume(){
         super.onResume();
@@ -366,7 +378,6 @@ public class MainActivity extends AppCompatActivity {
             textureView.setSurfaceTextureListener(textureListener);
         }
     }
-
     @Override
     protected void onPause(){
         stopBGThread();

@@ -5,10 +5,11 @@
     android:layout_height="match_parent"
     android:orientation="vertical"
     tools:context=".GalleryActivity">
-<androidx.viewpager.widget.ViewPager
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:id="@+id/viewPagerMain"/>
+
+    <androidx.viewpager.widget.ViewPager
+        android:id="@+id/viewPagerMain"
+        android:layout_width="match_parent"
+        android:layout_height="366dp" />
 
     <ImageView
         android:layout_width="match_parent"
