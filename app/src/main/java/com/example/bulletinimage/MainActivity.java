@@ -62,7 +62,6 @@ public class MainActivity extends AppCompatActivity {
     private Button btn_camera;
     private TextureView textureView;
 
-    private static final String TAG = "AndroidCameraApi";
 
     private static final SparseIntArray ORIENTATIONS = new SparseIntArray();
     static {
@@ -128,7 +127,6 @@ public class MainActivity extends AppCompatActivity {
     private final CameraDevice.StateCallback stateCallback = new CameraDevice.StateCallback() {
         @Override
         public void onOpened(@NonNull CameraDevice camera) {
-            Log.e(TAG, "onOpened");
             cameraDevice = camera;
             createCameraPreview();
         }
@@ -144,13 +142,18 @@ public class MainActivity extends AppCompatActivity {
         }
     };
 
-
-
+    /**
+     * I am sorry for the length of this function.
+     * Picture it's saved to to a folder in local storage, if that folder doesn't exist
+     * it will create that folder. The name of the file is the timestamp.
+     * When it saves it will save to local or external storage. Then it will try to save the image
+     * to the api.
+     */
     protected void takePicture(){
         if (cameraDevice == null){
-            Log.e(TAG, "cameraDevice is null");
             return;
         }
+        //Check if the user has permission to the external storage (SD card)
         if (!isExtStorageRW() || isExtStorageRO()){
             btn_camera.setEnabled(false);
         }
@@ -206,38 +209,45 @@ public class MainActivity extends AppCompatActivity {
                             e.printStackTrace();
                         }
                     }
+                    //Save the image to storage.
                     private void save(byte[] bytes) throws IOException {
                         try (OutputStream outputStream = new FileOutputStream(file)) {
                             outputStream.write(bytes);
                         }
                     }
+                    //Attempts to save the image to apy.
                     private void saveToApi() throws IOException {
-                        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-                        Bitmap img = BitmapFactory.decodeFile(file.getAbsolutePath());
-                        img.compress(Bitmap.CompressFormat.JPEG, 100, byteArrayOutputStream);
-                        byte[] byteArray = byteArrayOutputStream .toByteArray();
-                        String encodedString = Base64.encodeToString(byteArray, Base64.DEFAULT);
+                        try {
 
-                        OkHttpClient client = new OkHttpClient().newBuilder().build();
+                            ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+                            Bitmap img = BitmapFactory.decodeFile(file.getAbsolutePath());
+                            img.compress(Bitmap.CompressFormat.JPEG, 100, byteArrayOutputStream);
+                            byte[] byteArray = byteArrayOutputStream .toByteArray();
+                            String encodedString = Base64.encodeToString(byteArray, Base64.DEFAULT);
 
-                        RequestBody formBody = new FormBody.Builder().add("image", encodedString).build();
+                            OkHttpClient client = new OkHttpClient().newBuilder().build();
 
-                        Request request = new Request.Builder()
-                                .url("http://192.168.1.90:8080/upload") //Your machines local IPV4
-                                .method("POST", formBody)
-                                .build();
+                            RequestBody formBody = new FormBody.Builder().add("image", encodedString).build();
 
-                        client.newCall(request).enqueue(new Callback() {
+                            Request request = new Request.Builder()
+                                    .url("http://192.168.1.90:8080/upload") //Your machines local IPV4
+                                    .method("POST", formBody)
+                                    .build();
 
-                            public void onFailure(@NonNull Call call, @NonNull IOException e) {
-                                e.printStackTrace();
-                            }
+                            client.newCall(request).enqueue(new Callback() {
 
-                            @Override
-                            public void onResponse(@NonNull Call call, @NonNull Response response) {
-                                Log.d("onResponse API call", response.toString());
-                            }
-                        });
+                                public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                                    e.printStackTrace();
+                                }
+
+                                @Override
+                                public void onResponse(@NonNull Call call, @NonNull Response response) {
+                                    Log.d("onResponse API call", response.toString());
+                                }
+                            });
+                        }catch (Exception e){
+                            e.printStackTrace();
+                        }
                     }
 
                 };
@@ -247,7 +257,7 @@ public class MainActivity extends AppCompatActivity {
                     public void onCaptureCompleted(CameraCaptureSession session, CaptureRequest request, TotalCaptureResult result){
                         super.onCaptureCompleted(session, request, result);
                         Toast.makeText(MainActivity.this, "Saved:" + file, Toast.LENGTH_SHORT).show();
-                        Log.d(TAG, "" + file);
+                        Log.d("Main: ", "" + file);
                         createCameraPreview();
                     }
                 };
@@ -270,22 +280,11 @@ public class MainActivity extends AppCompatActivity {
             }
         }
     }
-    private static boolean isExtStorageRO(){
-        String extStorageState = Environment.getExternalStorageState();
-        return Environment.MEDIA_MOUNTED_READ_ONLY.equals(extStorageState);
-    }
-    private static boolean isExtStorageRW(){
-        String extStorageState = Environment.getExternalStorageState();
-        return extStorageState.equals(Environment.MEDIA_MOUNTED);
-    }
-    private boolean isStoragePermGrant(){
-        if(checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED){
-            return true;
-        }else{
-            ActivityCompat.requestPermissions(this, new String []{Manifest.permission.WRITE_EXTERNAL_STORAGE}, 1);
-            return false;
-        }
-    }
+
+    /** createCaptureSession is deprecated, but in the documentation it didn't provide a substitute
+     * https://developer.android.com/reference/android/hardware/camera2/CameraDevice
+     * So I made the choice to keep it and replace it in the future.
+     */
     protected void createCameraPreview(){
         try {
             SurfaceTexture texture = textureView.getSurfaceTexture();
@@ -310,9 +309,13 @@ public class MainActivity extends AppCompatActivity {
             e.printStackTrace();
         }
     }
+
+    /**
+     * Starts the camera if permission was granted by the user.
+     */
     private void openCamera(){
         CameraManager manager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
-        Log.e(TAG, "Opening Camera");
+        Log.e("Main: ", "Opening Camera");
         try {
             cameraId = manager.getCameraIdList()[0];
             CameraCharacteristics cameraCharacteristics = manager.getCameraCharacteristics(cameraId);
@@ -320,19 +323,50 @@ public class MainActivity extends AppCompatActivity {
             assert map != null;
             imageDimensions = map.getOutputSizes(SurfaceTexture.class)[0];
 
-            if(ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED){
-                ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.CAMERA, Manifest.permission.WRITE_EXTERNAL_STORAGE}, REQUEST_CAMERA_PERMISSION);
+            if(ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED
+                    && ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED)
+            {
+                ActivityCompat.requestPermissions(MainActivity.this, new String[]
+                        {Manifest.permission.CAMERA, Manifest.permission.WRITE_EXTERNAL_STORAGE}, REQUEST_CAMERA_PERMISSION);
                 return;
             }
             manager.openCamera(cameraId, stateCallback, null);
         } catch (CameraAccessException e) {
             e.printStackTrace();
         }
-        Log.e(TAG, "Camera " + cameraId + " open");
     }
+
+    /**
+     * Simple checks to make sure that the user has granted permission to use storage.
+     * I am unsure if ReadOnly is necessary, but I checked both.
+     * @returns true if permission is granted by the user.
+     * Or request permission of not.
+     */
+    private static boolean isExtStorageRO(){
+        String extStorageState = Environment.getExternalStorageState();
+        return Environment.MEDIA_MOUNTED_READ_ONLY.equals(extStorageState);
+    }
+    private static boolean isExtStorageRW(){
+        String extStorageState = Environment.getExternalStorageState();
+        return extStorageState.equals(Environment.MEDIA_MOUNTED);
+    }
+    private boolean isStoragePermGrant(){
+        if(checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED){
+            return true;
+        }else{
+            ActivityCompat.requestPermissions(this, new String []{Manifest.permission.WRITE_EXTERNAL_STORAGE}, 1);
+            return false;
+        }
+    }
+
+    /**
+     * After a picture has been taken we need to update the preview
+     * or if the app pauses for any reason. Så the following functions
+     * stops and start the app, if not the camera will freeze indefinitely.
+     */
     protected void updatePreview(){
         if (cameraDevice == null){
-            Log.e(TAG, "updatePreview Error");
+            Log.e("Main: ", "updatePreview Error");
         }
         captureRequestBuilder.set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_AUTO);
         try {
@@ -341,17 +375,6 @@ public class MainActivity extends AppCompatActivity {
             e.printStackTrace();
         }
     }
-
-    public void onRequestPermissionResult(int requestCode, @NonNull String[] permission, @NonNull int[] grantResult){
-        super.onRequestPermissionsResult(requestCode, permission, grantResult);
-        if (requestCode == REQUEST_CAMERA_PERMISSION){
-            if (grantResult[0] == PackageManager.PERMISSION_DENIED){
-                Toast.makeText(MainActivity.this, "We can't work without permission :(", Toast.LENGTH_LONG).show();
-                finish();
-            }
-        }
-    }
-
     protected void startBGThread(){
         mBackgroundThread = new HandlerThread("Camera Background");
         mBackgroundThread.start();
@@ -367,7 +390,6 @@ public class MainActivity extends AppCompatActivity {
             e.printStackTrace();
         }
     }
-
     @Override
     protected void onResume(){
         super.onResume();

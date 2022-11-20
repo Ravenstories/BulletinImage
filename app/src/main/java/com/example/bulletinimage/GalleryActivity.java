@@ -43,6 +43,10 @@ public class GalleryActivity extends AppCompatActivity {
         mViewPager.setAdapter(mViewPagerAdapter);
     }
 
+
+    /**
+     * Self explanatory. Get the images from the sd card.
+     */
     public void getFromSdCard(){
         String folderName = "MyPhotoDir";
         File file = new File(getExternalFilesDir(folderName), "/");
@@ -58,12 +62,15 @@ public class GalleryActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * Needs to be rewritten, but I also need to create a better api.
+     */
     public void getFromApi(){
         OkHttpClient client = new OkHttpClient();
         String url = "10.108.137.151/files";
 
         Request request = new Request.Builder()
-                .url("http://192.168.1.90:8080/files/") //Your machines local IPV4
+                .url("http://192.168.1.90:8080/files/")
                 .method("GET", null)
                 .build();
 
